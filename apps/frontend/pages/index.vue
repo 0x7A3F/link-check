@@ -1,45 +1,41 @@
 <script setup lang="ts">
 import { ref } from "vue";
 
-const apiResult = ref<{ message: string; status: string } | null>(null);
-const apiError = ref("");
+const url = ref("");
+const loading = ref(false);
 
-async function testApi() {
-    apiError.value = "";
-
-    try {
-        apiResult.value = await $fetch("http://localhost:8000/api/health");
-    } catch (error) {
-    apiError.value = error instanceof Error ? error.message : "Api Request Failed";
-    }
-}
-
-definePageMeta({
-  layout: "dashboard",
-});
+async function checkUrl() {}
 </script>
 
 <template>
-  <uDashboardPanel>
-    <template #header>
-      <uDashboardNavbar title="Home Page" icon="i-lucide-house" />
-    </template>
+    <div class="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center gap-6 px-4 py-10">
+        <div class="text-center">
+            <h1 class="text-3xl font-bold">Is this link sus?</h1>
+            <p class="mt-2 text-muted">
+                Paste a URL, and we check how likely it is to be a scam.
+            </p>
+        </div>
 
-    <div class="p-4">
-      <label for="search" class="mb-2 block font-medium text-sm">Search</label>
-      <input
-        id="search"
-        type="text"
-        placeholder="Look up URL..."
-        class="w-full rounded border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
-      />
+        <UCard>
+            <form class="flex gap-2" @submit.prevent="checkUrl">
+                <UInput
+                    v-model="url"
+                    class="flex-1"
+                    size="xl"
+                    icon="i-lucide-link"
+                    placeholder="https://example.com/free-iphone"
+                    :disabled="loading"
+                />
+
+                <UButton
+                    type="submit"
+                    size="xl"
+                    icon="i-lucide-search"
+                    :loading="loading"
+                >
+                    Check
+                </UButton>
+            </form>
+        </UCard>
     </div>
-
-    <button class="mt-3 rounded bg-blue-600 px-3 py-2 text-white" @click="testApi">
-        Test API
-    </button>
-
-    <p v-if="apiResult" class="mt-3">{{ apiResult.message }} ({{ apiResult.status }})</p>
-    <p v-if="apiError" class="mt-3 text-red-600">{{ apiError }}</p>
-  </uDashboardPanel>
 </template>
