@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from datetime import datetime, timezone
 
@@ -13,6 +14,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+class CheckRequest(BaseModel):
+    url: str
+
 
 @app.get("/api/health")
 def health():
@@ -22,4 +26,13 @@ def health():
         "message": "Backend API running",
         "uptime": int(uptime.total_seconds()),
         "status": "online"
+    }
+
+
+@app.post("/api/check")
+def check(body: CheckRequest):
+    return {
+        "url": body.url,
+        "status": "wip",
+        "message": "In development, check coming later."
     }

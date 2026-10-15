@@ -1,10 +1,34 @@
 <script setup lang="ts">
 import { ref } from "vue";
 
+const API_URL = "http://localhost:8000";
+
 const url = ref("");
 const loading = ref(false);
+const result = ref<{ url: string, status: string, message: string } | null>(null);
+const error = ref("");
 
-async function checkUrl() {}
+async function checkUrl() {
+    loading.value = true;
+    error.value = "";
+    result.value = null;
+
+    try {
+        const res = await fetch(`${API_URL}/api/check`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: url.value })
+        });
+
+        if (!res.ok) throw new Error(`Server: ${res.status}`);
+
+        result.value = await res.json();
+    } catch (e) {
+        error.value = e instanceof Error ? e.message : "Something went wrong";
+    }  finally {
+        loading.value = false;
+    }
+}
 </script>
 
 <template>
@@ -37,5 +61,23 @@ async function checkUrl() {}
                 </UButton>
             </form>
         </UCard>
+
+        <UAlert
+            v-if="result"
+            color="info"
+            variant="subtle"
+            icon="i-lucide-construction"
+            :title="result.status.toUpperCase()"
+            :description="result.message"
+        />
+
+        <UAlert
+            v-if="error"
+            color="error"
+            variant="subtle"
+            icon="i-lucide-circle-alert"
+            title="Error"
+            :description="error"
+        />
     </div>
 </template>
