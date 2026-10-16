@@ -6,7 +6,11 @@ from pydantic import BaseModel
 
 from datetime import datetime, timezone
 
-app = FastAPI()
+app = FastAPI(
+    title="Link Checking API",
+    description="Check how likely a URL is to be a scam. **Work in progress.**",
+    version="0.1.0",
+)
 
 start_time = datetime.now(timezone.utc)
 
