@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 
-const API_URL = "http://localhost:8000";
+const API_URL = useRuntimeConfig().public.apiBase;
 
 const url = ref("");
 const loading = ref(false);
