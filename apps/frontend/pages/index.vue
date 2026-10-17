@@ -74,9 +74,11 @@ async function checkUrl() {
 
         <UAlert
             v-if="result"
-            color="info"
+            :color="result.status === 'ok' ? 'success' : 'error'"
             variant="subtle"
-            icon="i-lucide-construction"
+            :icon="result.status === 'ok'
+                ? 'i-lucide-shield-check'
+                : 'i-lucide-shield-alert'"
             :title="result.status.toUpperCase()"
             :description="result.message"
         />

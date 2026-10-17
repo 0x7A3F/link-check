@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 app = FastAPI(
     title="Link Checking API",
@@ -29,6 +30,28 @@ app.add_middleware(
 class CheckRequest(BaseModel):
     url: str
 
+SHORTENERS = {
+    "bit.ly",
+    "tinyurl.com",
+    "t.co",
+    "is.gd",
+    "cutt.ly"
+}
+
+def analyze_url(value):
+    parsed = urlparse(value if "://" in value else f"https://{value}")
+    hostname = (parsed.hostname or "").lower()
+
+    if hostname in SHORTENERS:
+        return {
+            "status": "Suspicious",
+            "message": "This URL uses a URL shortening service."
+        }
+
+    return {
+        "status": "ok",
+        "message": "No known URL shortener detected."
+    }
 
 @app.get("/api/health")
 def health():
@@ -45,6 +68,5 @@ def health():
 def check(body: CheckRequest):
     return {
         "url": body.url,
-        "status": "wip",
-        "message": "In development, check coming later."
+        **analyze_url(body.url),
     }
