@@ -9,11 +9,19 @@ const result = ref<{ url: string, status: string, message: string } | null>(null
 const error = ref("");
 
 async function checkUrl() {
+    if (!url.value.trim()) return;
+
     loading.value = true;
     error.value = "";
     result.value = null;
 
     try {
+        const parsedUrl = new URL(url.value);
+
+        if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+            throw new Error("Only HTTP and HTTPS URLs are supported.")
+        }
+
         const res = await fetch(`${API_URL}/api/check`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -46,9 +54,11 @@ async function checkUrl() {
                     v-model="url"
                     class="flex-1"
                     size="xl"
+                    type="url"
                     icon="i-lucide-link"
                     placeholder="https://example.com/free-iphone"
                     :disabled="loading"
+                    required
                 />
 
                 <UButton
