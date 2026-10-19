@@ -38,14 +38,30 @@ SHORTENERS = {
     "cutt.ly"
 }
 
+SUS_WORDS = {
+    "free"
+}
+
 def analyze_url(value):
     parsed = urlparse(value if "://" in value else f"https://{value}")
     hostname = (parsed.hostname or "").lower()
+    haystack = f"{hostname}{parsed.path}{parsed.query}".lower()
+
+    reasons = []
 
     if hostname in SHORTENERS:
+        reasons.append("This URL uses a URL shortening service.")
+
+    found_words = sorted(word for word in SUS_WORDS if word in haystack)
+    if found_words:
+        reasons.append(
+            f"This URL contains suspicious words: {', '.join(found_words)}."
+        )
+
+    if reasons:
         return {
             "status": "Suspicious",
-            "message": "This URL uses a URL shortening service."
+            "message": " ".join(reasons),
         }
 
     return {
