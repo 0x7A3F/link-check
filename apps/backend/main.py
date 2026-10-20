@@ -1,11 +1,31 @@
 import os
+from datetime import datetime, timezone
+from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from datetime import datetime, timezone
-from urllib.parse import urlparse
+BASE_DIR = Path(__file__).parent
+WORDS_DIR = BASE_DIR / "words"
+
+def load_wordlist(filename: str) -> set[str]:
+    path = WORDS_DIR / filename
+    if not path.exists():
+        print(f"[warn] {path} niet gevonden, lege lijst gebruikt")
+        return set()
+
+    words = set()
+    with path.open(encoding="utf-8") as f:
+        for line in f:
+            line = line.strip().lower()
+            if line and not line.startswith("#"):
+                words.add(line)
+    return words
+
+SHORTENERS = load_wordlist("shorteners.txt")
+SUS_WORDS = load_wordlist("sus_words.txt")
 
 app = FastAPI(
     title="Link Checking API",
@@ -30,19 +50,7 @@ app.add_middleware(
 class CheckRequest(BaseModel):
     url: str
 
-SHORTENERS = {
-    "bit.ly",
-    "tinyurl.com",
-    "t.co",
-    "is.gd",
-    "cutt.ly"
-}
-
-SUS_WORDS = {
-    "free"
-}
-
-def analyze_url(value):
+def analyze_url(value: str):
     parsed = urlparse(value if "://" in value else f"https://{value}")
     hostname = (parsed.hostname or "").lower()
     haystack = f"{hostname}{parsed.path}{parsed.query}".lower()
@@ -66,7 +74,7 @@ def analyze_url(value):
 
     return {
         "status": "ok",
-        "message": "No known URL shortener detected."
+        "message": "No known URL shortener detected.",
     }
 
 @app.get("/api/health")
@@ -76,9 +84,8 @@ def health():
     return {
         "message": "Backend API running",
         "uptime": int(uptime.total_seconds()),
-        "status": "online"
+        "status": "online",
     }
-
 
 @app.post("/api/check")
 def check(body: CheckRequest):

@@ -1,0 +1,5 @@
+bit.ly
+tinyurl.com
+t.co
+is.gd
+cutt.ly
