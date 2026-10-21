@@ -49,47 +49,13 @@ async function checkUrl() {
         </div>
 
         <UCard>
-            <form class="flex gap-2" @submit.prevent="checkUrl">
-                <UInput
-                    v-model="url"
-                    class="flex-1"
-                    size="xl"
-                    type="url"
-                    icon="i-lucide-link"
-                    placeholder="https://example.com/free-iphone"
-                    :disabled="loading"
-                    required
-                />
-
-                <UButton
-                    type="submit"
-                    size="xl"
-                    icon="i-lucide-search"
-                    :loading="loading"
-                >
-                    Check
-                </UButton>
-            </form>
+            <UrlCheckForm
+                v-model="url"
+                :loading="loading"
+                @submit="checkUrl"
+            />
         </UCard>
 
-        <UAlert
-            v-if="result"
-            :color="result.status === 'ok' ? 'success' : 'error'"
-            variant="subtle"
-            :icon="result.status === 'ok'
-                ? 'i-lucide-shield-check'
-                : 'i-lucide-shield-alert'"
-            :title="result.status.toUpperCase()"
-            :description="result.message"
-        />
-
-        <UAlert
-            v-if="error"
-            color="error"
-            variant="subtle"
-            icon="i-lucide-circle-alert"
-            title="Error"
-            :description="error"
-        />
+        <CheckFeedback :result="result" :error="error" />
     </div>
 </template>
