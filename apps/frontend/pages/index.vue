@@ -57,5 +57,9 @@ async function checkUrl() {
         </UCard>
 
         <CheckFeedback :result="result" :error="error" />
+
+        <div class="flex justify-end">
+            <ReportButton />
+        </div>
     </div>
 </template>
