@@ -17,7 +17,7 @@ services:
     build: ./apps/frontend
     restart: unless-stopped
     environment:
-      NUXT_PUBLIC_API_BASE: ${PUBLIC_API_URL:-http://localhost:8000}
+      NUXT_PUBLIC_API_BASE: http://backend:8000
       NUXT_TURNSTILE_SECRET_KEY: ${NUXT_TURNSTILE_SECRET_KEY:-}
       NUXT_PUBLIC_TURNSTILE_SITE_KEY: ${NUXT_PUBLIC_TURNSTILE_SITE_KEY:-}
       NUXT_RESEND_API_KEY: ${NUXT_RESEND_API_KEY:-}
@@ -28,3 +28,15 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+volumes:
+  prometheus-data:

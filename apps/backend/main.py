@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from starlette.responses import Response
 
 BASE_DIR = Path(__file__).parent
 WORDS_DIR = BASE_DIR / "words"
@@ -34,6 +35,9 @@ app = FastAPI(
 )
 
 start_time = datetime.now(timezone.utc)
+page_views = 0
+url_checks = 0
+flagged_urls = 0
 
 origins = [
     o.strip()
@@ -89,7 +93,34 @@ def health():
 
 @app.post("/api/check")
 def check(body: CheckRequest):
+    global url_checks, flagged_urls
+
+    url_checks += 1
+    result = analyze_url(body.url)
+    if result["status"] == "Suspicious":
+        flagged_urls += 1
+
     return {
         "url": body.url,
-        **analyze_url(body.url),
+        **result,
     }
+
+@app.post("/api/visit", status_code=204)
+def visit():
+    global page_views
+    page_views += 1
+    return None
+
+@app.get("/metrics", include_in_schema=False)
+def metrics():
+    content = f"""# HELP page_views_total Number of homepage views.
+# TYPE page_views_total counter
+page_views_total {page_views}
+# HELP url_checks_total Number of URLs checked.
+# TYPE url_checks_total counter
+url_checks_total {url_checks}
+# HELP flagged_urls_total Number of URLs flagged as suspicious.
+# TYPE flagged_urls_total counter
+flagged_urls_total {flagged_urls}
+"""
+    return Response(content, media_type="text/plain; version=0.0.4; charset=utf-8")
