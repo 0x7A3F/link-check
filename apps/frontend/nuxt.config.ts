@@ -9,6 +9,9 @@ export default defineNuxtConfig({
   ],
   css: ["~/assets/css/main.css"],
   runtimeConfig: {
+    resend: {
+      apiKey: "",
+    },
     turnstile: {
       secretKey: "",
     },
