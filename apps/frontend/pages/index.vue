@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from "vue";
 
-const API_URL = useRuntimeConfig().public.apiBase;
-
 const url = ref("");
+const turnstileToken = ref("");
+const checkForm = ref<{ resetTurnstile: () => void } | null>(null);
 const loading = ref(false);
 const result = ref<{ url: string, status: string, message: string } | null>(null);
 const error = ref("");
@@ -22,19 +22,26 @@ async function checkUrl() {
             throw new Error("Only HTTP and HTTPS URLs are supported.")
         }
 
-        const res = await fetch(`${API_URL}/api/check`, {
+        const res = await fetch("/api/check", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: url.value })
+            body: JSON.stringify({
+                url: url.value,
+                token: turnstileToken.value,
+            })
         });
 
-        if (!res.ok) throw new Error(`Server: ${res.status}`);
+        if (!res.ok) {
+            throw new Error(res.statusText || `Server: ${res.status}`);
+        }
 
         result.value = await res.json();
     } catch (e) {
         error.value = e instanceof Error ? e.message : "Something went wrong";
-    }  finally {
+    } finally {
         loading.value = false;
+        turnstileToken.value = "";
+        checkForm.value?.resetTurnstile();
     }
 }
 </script>
@@ -50,7 +57,9 @@ async function checkUrl() {
 
         <UCard>
             <UrlCheckForm
+                ref="checkForm"
                 v-model="url"
+                v-model:token="turnstileToken"
                 :loading="loading"
                 @submit="checkUrl"
             />

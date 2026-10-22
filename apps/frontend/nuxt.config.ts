@@ -4,16 +4,21 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: [
     "@nuxt/ui",
-    "nuxt-resend"
+    "nuxt-resend",
+    "@nuxtjs/turnstile"
   ],
   css: ["~/assets/css/main.css"],
   runtimeConfig: {
-    turnstileSecretKey: "",
+    turnstile: {
+      secretKey: "",
+    },
     reportToEmail: "",
     emailFrom: "",
     public: {
       apiBase: "http://localhost:8000",
-      turnstileSiteKey: ""
+      turnstile: {
+        siteKey: "",
+      },
     }
   }
 })

@@ -10,7 +10,9 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@nuxt/scripts": "^1.3.12",
     "@nuxt/ui": "^4.11.3",
+    "@nuxtjs/turnstile": "^1.1.3",
     "nuxt": "^4.6.1",
     "nuxt-resend": "^0.0.2",
     "tailwindcss": "^4.3.3",
