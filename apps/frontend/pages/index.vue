@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 
 const url = ref("");
 const turnstileToken = ref("");
@@ -7,6 +7,10 @@ const checkForm = ref<{ resetTurnstile: () => void } | null>(null);
 const loading = ref(false);
 const result = ref<{ url: string, status: string, message: string } | null>(null);
 const error = ref("");
+
+onMounted(() => {
+    $fetch("/api/visit", { method: "POST" }).catch(() => {});
+});
 
 async function checkUrl() {
     if (!url.value.trim()) return;

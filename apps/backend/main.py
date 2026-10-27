@@ -1,10 +1,13 @@
+import hashlib
 import os
-from datetime import datetime, timezone
+import secrets
+from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, generate_latest
 from pydantic import BaseModel
 
 BASE_DIR = Path(__file__).parent
@@ -35,6 +38,31 @@ app = FastAPI(
 
 start_time = datetime.now(timezone.utc)
 
+CHECKS = Counter("linkcheck_checks", "URLs checked", ["result"])
+FLAG_REASONS = Counter("linkcheck_flag_reasons", "Reasons a URL was flagged", ["reason"])
+PAGE_VIEWS = Counter("linkcheck_page_views", "Homepage views")
+UNIQUE_VISITORS = Gauge("linkcheck_unique_visitors_today", "Unique visitors since 00:00 UTC")
+
+for result in ("flagged", "clean"):
+    CHECKS.labels(result)
+for reason in ("shortener", "sus_words"):
+    FLAG_REASONS.labels(reason)
+
+visitor_day = date.min
+visitor_salt = b""
+visitor_hashes: set[str] = set()
+
+def record_visitor(ip: str):
+    global visitor_day, visitor_salt
+    today = datetime.now(timezone.utc).date()
+    if today != visitor_day:
+        visitor_day = today
+        visitor_salt = secrets.token_bytes(16)
+        visitor_hashes.clear()
+
+    visitor_hashes.add(hashlib.sha256(visitor_salt + ip.encode()).hexdigest())
+    UNIQUE_VISITORS.set(len(visitor_hashes))
+
 origins = [
     o.strip()
     for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
@@ -50,6 +78,9 @@ app.add_middleware(
 class CheckRequest(BaseModel):
     url: str
 
+class VisitRequest(BaseModel):
+    ip: str = ""
+
 def analyze_url(value: str):
     parsed = urlparse(value if "://" in value else f"https://{value}")
     hostname = (parsed.hostname or "").lower()
@@ -58,10 +89,12 @@ def analyze_url(value: str):
     reasons = []
 
     if hostname in SHORTENERS:
+        FLAG_REASONS.labels("shortener").inc()
         reasons.append("This URL uses a URL shortening service.")
 
     found_words = sorted(word for word in SUS_WORDS if word in haystack)
     if found_words:
+        FLAG_REASONS.labels("sus_words").inc()
         reasons.append(
             f"This URL contains suspicious words: {', '.join(found_words)}."
         )
@@ -89,7 +122,20 @@ def health():
 
 @app.post("/api/check")
 def check(body: CheckRequest):
+    result = analyze_url(body.url)
+    CHECKS.labels("flagged" if result["status"] == "Suspicious" else "clean").inc()
+
     return {
         "url": body.url,
-        **analyze_url(body.url),
+        **result,
     }
+
+@app.post("/api/visit", status_code=204)
+def visit(body: VisitRequest):
+    PAGE_VIEWS.inc()
+    if body.ip:
+        record_visitor(body.ip)
+
+@app.get("/metrics", include_in_schema=False)
+def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
