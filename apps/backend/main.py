@@ -30,6 +30,7 @@ def load_wordlist(filename: str) -> set[str]:
 
 SHORTENERS = load_wordlist("shorteners.txt")
 SUS_WORDS = load_wordlist("sus_words.txt")
+SUS_TLDS = load_wordlist("sus_tlds.txt")
 
 app = FastAPI(
     title="Link Checking API",
@@ -46,7 +47,7 @@ UNIQUE_VISITORS = Gauge("linkcheck_unique_visitors_today", "Unique visitors sinc
 
 for result in ("flagged", "clean"):
     CHECKS.labels(result)
-for reason in ("shortener", "sus_words", "ip_address", "credentials"):
+for reason in ("shortener", "sus_words", "sus_tld", "ip_address", "credentials"):
     FLAG_REASONS.labels(reason)
 
 visitor_day = date.min
@@ -107,6 +108,11 @@ def analyze_url(value: str):
     if is_shortener(hostname):
         FLAG_REASONS.labels("shortener").inc()
         reasons.append("This URL uses a URL shortening service.")
+
+    tld = hostname.rsplit(".", 1)[-1] if "." in hostname else ""
+    if tld in SUS_TLDS:
+        FLAG_REASONS.labels("sus_tld").inc()
+        reasons.append(f"This URL uses the .{tld} domain extension, which is often used for scams.")
 
     if is_ip_address(hostname):
         FLAG_REASONS.labels("ip_address").inc()
