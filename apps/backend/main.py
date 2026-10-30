@@ -1,4 +1,5 @@
 import hashlib
+import ipaddress
 import os
 import secrets
 from datetime import date, datetime, timezone
@@ -8,7 +9,7 @@ from urllib.parse import urlparse
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, generate_latest
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 BASE_DIR = Path(__file__).parent
 WORDS_DIR = BASE_DIR / "words"
@@ -45,7 +46,7 @@ UNIQUE_VISITORS = Gauge("linkcheck_unique_visitors_today", "Unique visitors sinc
 
 for result in ("flagged", "clean"):
     CHECKS.labels(result)
-for reason in ("shortener", "sus_words"):
+for reason in ("shortener", "sus_words", "ip_address", "credentials"):
     FLAG_REASONS.labels(reason)
 
 visitor_day = date.min
@@ -76,21 +77,46 @@ app.add_middleware(
     allow_headers=["*"],
 )
 class CheckRequest(BaseModel):
-    url: str
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    url: str = Field(min_length=1, max_length=2048)
 
 class VisitRequest(BaseModel):
     ip: str = ""
 
+def is_shortener(hostname: str) -> bool:
+    return any(
+        hostname == domain or hostname.endswith(f".{domain}")
+        for domain in SHORTENERS
+    )
+
+def is_ip_address(hostname: str) -> bool:
+    try:
+        ipaddress.ip_address(hostname)
+        return True
+    except ValueError:
+        return False
+
 def analyze_url(value: str):
     parsed = urlparse(value if "://" in value else f"https://{value}")
-    hostname = (parsed.hostname or "").lower()
+    hostname = (parsed.hostname or "").lower().rstrip(".")
     haystack = f"{hostname}{parsed.path}{parsed.query}".lower()
 
     reasons = []
 
-    if hostname in SHORTENERS:
+    if is_shortener(hostname):
         FLAG_REASONS.labels("shortener").inc()
         reasons.append("This URL uses a URL shortening service.")
+
+    if is_ip_address(hostname):
+        FLAG_REASONS.labels("ip_address").inc()
+        reasons.append("This URL points to an IP address instead of a domain name.")
+
+    if "@" in parsed.netloc:
+        FLAG_REASONS.labels("credentials").inc()
+        reasons.append(
+            "This URL contains an '@' before the domain, which can hide the real destination."
+        )
 
     found_words = sorted(word for word in SUS_WORDS if word in haystack)
     if found_words:
@@ -107,7 +133,7 @@ def analyze_url(value: str):
 
     return {
         "status": "ok",
-        "message": "No known URL shortener detected.",
+        "message": "No suspicious patterns detected.",
     }
 
 @app.get("/api/health")
